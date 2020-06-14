@@ -14,10 +14,9 @@ pool:
 steps:
 - script: echo Hello, world!
   displayName: 'Run a one-line script'
-
 - task: AzureFileCopy@4
   inputs:
-    SourcePath: 'join.usql'
+    SourcePath: '*'
     azureSubscription: 'Azure для учащихся (a66ba509-6b33-4f11-b3f8-8547f92c3805)'
     Destination: 'AzureBlob'
     storage: 'senmireablob'
