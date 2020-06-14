@@ -1,0 +1,38 @@
+DECLARE @inputPartFile = @pipelineName + "/process/" + "joined_part_flights_tickets_airports_bookings.csv";
+DECLARE @inputFullFile = @pipelineName + "/process/" + "joined_full_flights_tickets_airports_bookings.csv";
+DECLARE @outputFile = @pipelineName + "/process/" + "joined_full_flights_tickets_airports_bookings.csv";
+
+@fullData = 
+    EXTRACT
+        book_date DateTime,
+        passenger_id string, 
+        passenger_name string, 
+        phone string, 
+        email string,
+        arrival_airport string, 
+        scheduled_departure string, 
+        arrival_city string
+    FROM @inputFullFile
+    USING Extractors.Csv();
+
+@partData = 
+    EXTRACT
+        book_date DateTime,
+        passenger_id string, 
+        passenger_name string, 
+        phone string, 
+        email string,
+        arrival_airport string, 
+        scheduled_departure string, 
+        arrival_city string
+    FROM @inputPartFile
+    USING Extractors.Csv();
+
+@result = 
+    SELECT * FROM @fullData
+    UNION DISTINCT
+    SELECT * FROM @partData;
+
+OUTPUT @result
+    TO @outputFile
+    USING Outputters.Csv();

@@ -1,0 +1,41 @@
+// DECLARE @year = "2020";
+// DECLARE @month = "04";
+
+DECLARE @inputBookings = @pipelineName + "/" + "process/" + @year + "/" + @month + "/" + "bookings_and_flights.csv";
+DECLARE @outputFile = @pipelineName + "/" + "output/" + @year + "/" + @month + "/" + "bookings_diff_report.csv";
+
+
+
+@bookings =
+    EXTRACT
+        book_ref string,
+        book_date DateTime,
+        total_amount decimal,
+        ticket_no string, 
+        passenger_id string,
+        passenger_name string,
+        phone string,
+        email string,
+        flight_id string,
+        amount decimal,
+        departure_airport string,
+        arrival_airport string,
+        scheduled_departure DateTime
+    FROM @inputBookings
+    USING Extractors.Csv();
+
+
+@result =
+    SELECT
+        book_ref,
+        COUNT(DISTINCT passenger_id) AS passengers_count,
+        COUNT(DISTINCT flight_id) AS flights_count,
+        (int)((MIN(scheduled_departure) - book_date).Value.TotalDays) AS book_and_flight_diff,
+        (int)AVG(amount) AS avg_ticket_price,
+        total_amount
+    FROM @bookings
+    GROUP BY book_ref, book_date, total_amount;
+
+OUTPUT @result
+    TO @outputFile
+    USING Outputters.Csv();

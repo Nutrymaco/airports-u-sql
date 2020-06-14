@@ -1,0 +1,26 @@
+DECLARE @inputFile = @pipelineName + "/process/joined_full_flights_tickets_airports_bookings.csv";
+DECLARE @outputFile = @pipelineName + "/output/popular_directions.csv";
+
+@data =
+    EXTRACT
+        book_date DateTime,
+        passenger_id string, 
+        passenger_name string, 
+        phone string, 
+        email string,
+        arrival_airport string, 
+        scheduled_departure string, 
+        arrival_city string
+    FROM @inputFile
+    USING Extractors.Csv();
+
+@result =
+    SELECT
+        arrival_city,
+        COUNT(1) AS count_of_flights
+    FROM @data
+    GROUP BY arrival_city;
+
+OUTPUT @result
+    TO @outputFile
+    USING Outputters.Csv();

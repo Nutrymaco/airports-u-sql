@@ -1,0 +1,8 @@
+{
+    "defaultContext": {
+        "account": "sendla",
+        "database": "master",
+        "schema": "usql"
+    },
+    "scripts": []
+}

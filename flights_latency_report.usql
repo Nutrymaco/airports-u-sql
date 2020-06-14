@@ -1,0 +1,44 @@
+DECLARE @inputFlights =  @pipelineName + "/" + "process/" + @year + "/" + @month + "/" + @day + "/" + "flights_time.csv";
+DECLARE @outputFile =  @pipelineName + "/"  + "output/" + @year + "/" + @month + "/" + @day + "/" + "flights_latency_report.csv";
+
+
+@flights = 
+    EXTRACT
+        flight_id string,
+        departure_airport string, 
+        departure_airport_name string,
+        city string, 
+        departure_airport_x decimal,
+        departure_airport_y decimal,
+        scheduled_departure DateTime, 
+        actual_departure DateTime
+    FROM @inputFlights
+    USING Extractors.Csv();
+
+
+@result =
+    SELECT
+        departure_airport, 
+        departure_airport_name,
+        departure_city_data.city,
+        departure_airport_x, 
+        departure_airport_y,
+        (int)AVG((actual_departure - scheduled_departure).TotalMinutes) AS avg_latency
+    FROM @flights
+    JOIN(
+            SELECT
+                city, departure_airport AS dep_a
+            FROM @flights
+        ) AS departure_city_data
+    ON departure_city_data.dep_a == departure_airport
+    GROUP BY 
+        departure_airport_name, departure_airport,
+        departure_city_data.city,
+        departure_airport_x, departure_airport_y;
+
+
+
+OUTPUT @result
+    TO @outputFile
+    ORDER BY avg_latency DESC
+    USING Outputters.Csv();

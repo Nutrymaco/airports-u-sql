@@ -1,0 +1,64 @@
+DECLARE @InputFile =  @pipelineName + "/"  + "process/" + @year + "/" + @month + "/" + @day + "/" + "flights_amount.csv";
+DECLARE @OutputFile =  @pipelineName + "/"  + "output/" + @year + "/" + @month + "/" + @day + "/" + "flights_amount_report.csv";
+
+
+@data = 
+    EXTRACT
+            departure_airport_code string,
+            arrival_airport_code string,
+            departure_airport string,
+            arrival_airport string,
+            departure_city string,
+            arrival_city string,
+            departure_airport_x decimal,
+            departure_airport_y decimal,
+            arrival_airport_x decimal,
+            arrival_airport_y decimal,
+            amount decimal
+    FROM @InputFile
+    USING Extractors.Csv();
+
+@departureAirports = 
+    SELECT DISTINCT
+        departure_airport AS airport,
+        departure_city AS city
+    FROM @data
+    GROUP BY departure_airport, departure_city;
+
+@arrivalAirports = 
+    SELECT DISTINCT
+        arrival_airport AS airport,
+        arrival_city AS city
+    FROM @data
+    GROUP BY arrival_airport, arrival_city;
+
+@result = 
+    SELECT 
+        departure_airport_code, arrival_airport_code,
+        departure_airport, arrival_airport,
+        dep_a.city AS departure_city,
+        arr_a.city AS arrival_city,
+        departure_airport_x, departure_airport_y,
+        arrival_airport_x, arrival_airport_y,
+        (int)AVG(amount) AS avg_amount,
+        COUNT(1) AS tickets_count,
+        SUM(amount) AS sum_amount
+    FROM @data
+        JOIN @departureAirports AS dep_a
+            ON dep_a.airport == departure_airport
+        JOIN @arrivalAirports AS arr_a
+            ON arr_a.airport == arrival_airport
+    GROUP BY departure_airport, arrival_airport, 
+        departure_airport_code, arrival_airport_code,
+        departure_airport_x, departure_airport_y,
+        dep_a.city,
+        arr_a.city,
+        arrival_airport_x, arrival_airport_y;
+
+OUTPUT @result
+    TO @OutputFile
+    ORDER BY sum_amount DESC
+    USING Outputters.Csv();
+
+
+    

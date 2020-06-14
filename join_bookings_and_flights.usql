@@ -1,0 +1,58 @@
+DECLARE @inputFlights = @pipelineName + "/" + "raw/" + @year + "/" + @month + "/" + "flights.csv";
+DECLARE @inputTickets = @pipelineName + "/" + "raw/" + @year + "/" + @month + "/" + "tickets.csv";
+DECLARE @inputTicketFlights = @pipelineName + "/" + "raw/" + @year + "/" + @month + "/" + "ticket_flights.csv";
+DECLARE @inputBookings = @pipelineName + "/" + "raw/" + @year + "/" + @month + "/" + "bookings.csv";
+
+DECLARE @outputFile = @pipelineName + "/" + "process/" + @year + "/" + @month + "/" + "bookings_and_flights.csv";
+
+@flights = 
+    EXTRACT
+        flight_id string,
+        scheduled_departure DateTime,
+        actual_departure DateTime,
+        departure_airport string,
+        arrival_airport string
+    FROM @inputFlights
+    USING Extractors.Csv();
+
+@tickets =
+    EXTRACT
+        ticket_no string,
+        book_ref string,
+        passenger_id string,
+        passenger_name string,
+        phone string,
+        email string
+    FROM @inputTickets
+    USING Extractors.Csv(silent:true);
+
+@ticket_flights =
+    EXTRACT
+        ticket_no string,
+        flight_id string,
+        amount decimal
+    FROM @inputTicketFlights
+    USING Extractors.Csv();
+
+@bookings =
+    EXTRACT
+        book_ref string,
+        book_date DateTime,
+        total_amount decimal
+    FROM @inputBookings
+    USING Extractors.Csv();
+
+@result =
+    SELECT
+        @bookings.book_ref, book_date, total_amount,
+        tf.ticket_no, passenger_id, passenger_name, phone, email,
+        f.flight_id, amount,
+        departure_airport, arrival_airport, scheduled_departure
+    FROM @bookings
+        JOIN @tickets AS t ON @bookings.book_ref == t.book_ref
+        JOIN @ticket_flights AS tf ON t.ticket_no == tf.ticket_no
+        JOIN @flights AS f ON tf.flight_id == f.flight_id;
+
+OUTPUT @result
+    TO @outputFile
+    USING Outputters.Csv();

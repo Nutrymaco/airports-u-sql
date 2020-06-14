@@ -1,0 +1,57 @@
+DECLARE @inputFlights = @pipelineName + "/"  + "raw/" + @year + "/" + @month + "/" + @day + "/" + "flights.csv";
+DECLARE @inputTickets = @pipelineName + "/"  + "raw/" + @year + "/" + @month + "/" + @day + "/" + "ticket_flights.csv";
+DECLARE @inputAirports =  @pipelineName + "/"  + "raw/" + @year + "/" + @month + "/" + @day + "/" + "airports.csv";
+
+DECLARE @outputFile =  @pipelineName + "/"  + "process/" + @year + "/" + @month + "/" + @day + "/" + "flights_amount.csv";
+
+@flights = 
+    EXTRACT
+        flight_id string,
+        scheduled_departure DateTime,
+        actual_departure DateTime,
+        departure_airport string,
+        arrival_airport string
+    FROM @inputFlights
+    USING Extractors.Csv();
+
+@tickets = 
+    EXTRACT
+        ticket_no string,
+        flight_id string,
+        amount decimal
+    FROM @inputTickets
+    USING Extractors.Csv();
+
+@airports = 
+    EXTRACT
+        airport_code string,
+        airport_name string,
+        city string,
+        x decimal,
+        y decimal
+    FROM @inputAirports
+    USING Extractors.Csv();
+
+@result = 
+    SELECT 
+        departure_airport, arrival_airport,
+        dad.airport_name AS dan, 
+        aad.airport_name AS aan,
+        dad.city AS dc, aad.city AS ac,
+        dad.x AS dax, dad.y AS _day, 
+        aad.x AS aax, aad.y AS aay,
+        amount
+    FROM @flights
+    JOIN @tickets AS tf ON @flights.flight_id == tf.flight_id
+    JOIN @airports AS aad ON @flights.arrival_airport == aad.airport_code
+    JOIN @airports AS dad ON @flights.departure_airport == dad.airport_code
+    WHERE
+      scheduled_departure.ToString("yyyy") == @year
+        AND
+      scheduled_departure.ToString("MM") == @month
+        AND
+      scheduled_departure.ToString("dd") == @day;
+
+OUTPUT @result
+    TO @outputFile
+    USING Outputters.Csv();

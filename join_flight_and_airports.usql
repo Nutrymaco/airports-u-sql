@@ -1,0 +1,46 @@
+DECLARE @inputFlights =  @pipelineName + "/"  + "raw/" + @year + "/" + @month + "/" + @day + "/" + "flights.csv";
+DECLARE @inputAirports =  @pipelineName + "/"  + "raw/" + @year + "/" + @month + "/" + @day + "/" + "airports.csv";
+
+DECLARE @outputFile =  @pipelineName + "/"  + "process/" + @year + "/" + @month + "/" + @day + "/" + "flights_time.csv";
+
+
+@flights = 
+    EXTRACT
+        flight_id string,
+        scheduled_departure DateTime,
+        actual_departure DateTime,
+        departure_airport string,
+        arrival_airport string
+    FROM @inputFlights
+    USING Extractors.Csv();
+
+@airports = 
+    EXTRACT
+        airport_code string,
+        airport_name string,
+        city string,
+        x decimal,
+        y decimal
+    FROM @inputAirports
+    USING Extractors.Csv();
+
+@result = 
+    SELECT
+        flight_id,
+        departure_airport,
+        dad.airport_name AS dan,
+        city,
+        dad.x AS dax, dad.y AS _day, 
+        scheduled_departure, actual_departure
+    FROM @flights
+    JOIN @airports AS dad ON @flights.departure_airport == dad.airport_code
+    WHERE
+      scheduled_departure.ToString("yyyy") == @year
+        AND
+      scheduled_departure.ToString("MM") == @month
+        AND
+      scheduled_departure.ToString("dd") == @day;
+
+OUTPUT @result
+    TO @outputFile
+    USING Outputters.Csv();

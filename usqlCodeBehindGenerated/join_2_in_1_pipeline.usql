@@ -1,0 +1,92 @@
+// Generated Code Behind Header
+USE DATABASE [master];
+USE SCHEMA [usql];
+// Generated Code Behind Header
+DECLARE @year = "2020";
+DECLARE @month = "01";
+DECLARE @day = "02";
+DECLARE @pipelineName = "popular_directions";
+DECLARE @count_of_parts = "2";
+DECLARE @part_of_day = "1";
+
+
+
+DECLARE @inputFlights = @pipelineName + "/" + "raw" +  "/" + "flights.csv";
+DECLARE @inputTicketFlights = @pipelineName + "/" + "raw" +  "/" + "ticket_flights.csv";
+DECLARE @inputAirports = @pipelineName + "/" + "raw" +  "/" + "airports.csv";
+DECLARE @inputTickets = @pipelineName + "/" + "raw" +  "/" + "tickets.csv";
+DECLARE @inputBookings = @pipelineName + "/" + "raw" +  "/" + "bookings.csv";
+
+
+DECLARE @outputFile =  @pipelineName + "/process/" + "joined_part_flights_tickets_airports_bookings.csv";
+
+@flights = 
+    EXTRACT
+        flight_id string,
+        scheduled_departure DateTime,
+        actual_departure DateTime,
+        departure_airport string,
+        arrival_airport string
+    FROM @inputFlights
+    USING Extractors.Csv();
+
+@ticketFlights = 
+    EXTRACT
+        ticket_no string,
+        flight_id string,
+        amount decimal
+    FROM @inputTicketFlights
+    USING Extractors.Csv();
+
+@airports = 
+    EXTRACT
+        airport_code string,
+        airport_name string,
+        city string,
+        x decimal,
+        y decimal
+    FROM @inputAirports
+    USING Extractors.Csv();
+
+@tickets =
+    EXTRACT
+        ticket_no string,
+        book_ref string,
+        passenger_id string,
+        passenger_name string,
+        phone string,
+        email string
+    FROM @inputTickets
+    USING Extractors.Csv(silent:true);
+
+@bookings =
+    EXTRACT
+        book_ref string,
+        book_date DateTime,
+        total_amount decimal
+    FROM @inputBookings
+    USING Extractors.Csv();
+
+@result =
+    SELECT 
+        book_date,
+        passenger_id, passenger_name, phone, email,
+        arrival_airport, scheduled_departure, a.city
+    FROM @ticketFlights
+        JOIN @flights AS f ON @ticketFlights.flight_id == f.flight_id
+        JOIN @tickets AS t ON @ticketFlights.ticket_no == t.ticket_no
+        JOIN @bookings AS b ON t.book_ref == b.book_ref
+        JOIN @airports AS a ON f.arrival_airport == a.airport_code
+    WHERE
+        book_date < DateTime.Parse(@year + "-" + @month + "-" + @day).AddHours(-24/Int32.Parse(@count_of_parts)*(Int32.Parse(@part_of_day) - 1))
+            AND
+        book_date >= DateTime.Parse(@year + "-" + @month + "-" + @day).AddHours(-24/Int32.Parse(@count_of_parts)*(Int32.Parse(@part_of_day) - 2));
+
+OUTPUT @result
+    TO @outputFile
+    USING Outputters.Csv();
+
+// Generated Code Behind Footer
+USE DATABASE [master];
+USE SCHEMA [usql];
+// Generated Code Behind Footer

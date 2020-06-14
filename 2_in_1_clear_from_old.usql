@@ -1,0 +1,28 @@
+DECLARE @inputFile = @pipelineName + "/process/" + "joined_full_flights_tickets_airports_bookings.csv";
+DECLARE @outputFile = @pipelineName + "/process/" + "joined_full_flights_tickets_airports_bookings.csv";
+
+
+@data = 
+    EXTRACT
+        book_date DateTime,
+        passenger_id string, 
+        passenger_name string, 
+        phone string, 
+        email string,
+        arrival_airport string, 
+        scheduled_departure string, 
+        arrival_city string
+    FROM @inputFile
+    USING Extractors.Csv();
+
+@result = 
+    SELECT * FROM @data
+    WHERE
+        book_date < DateTime.Parse(@nowDate)
+            AND
+        book_date >= DateTime.Parse(@nowDate).AddHours(-1*Int32.Parse(@length_of_cycle));
+
+
+OUTPUT @result
+    TO @outputFile
+    USING Outputters.Csv();
