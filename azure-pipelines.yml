@@ -17,7 +17,7 @@ steps:
 
 - task: AzureFileCopy@4
   inputs:
-    SourcePath: '*.usql'
+    SourcePath: 'join.usql'
     azureSubscription: 'Azure для учащихся (a66ba509-6b33-4f11-b3f8-8547f92c3805)'
     Destination: 'AzureBlob'
     storage: 'senmireablob'
